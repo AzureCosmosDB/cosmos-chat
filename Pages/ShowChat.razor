@@ -1,0 +1,149 @@
+﻿@page "/showchat/{chatSessionId}/{chatSessionName}"
+@page "/nochatsavailable/{chatSessionId}"
+
+@using cosmoschat.Data
+@inject ChatService chatService
+@inject IJSRuntime JSRuntime
+
+
+<PageTitle>Chat Messages</PageTitle>
+
+<div class="h-100 d-flex flex-column overflow-hidden">
+	<!--Header Row-->
+    <div class="flex-column bg-light">
+        <div class="p-2" style="height:55px"><h2 class="text-dark">@GetChatSessionName()</h2></div>
+	 </div>
+	<!--Content Row-->
+    <div class="flex-column justify-content-center p-4 flex-grow-1 overflow-auto" id="chatmessagesdiv">
+        @if (chatSessionId=="404")
+        {
+            <div class="alert alert-secondary mt-4">
+                <span class="oi oi-envelope-open me-2" aria-hidden="true"></span>
+                <strong>No Chats Available</strong>
+
+                <span class="text-nowrap">
+                    Use the New Chat option to start a new chat.
+                </span>
+            </div>
+        }
+        else
+        {
+            if (chatMessages == null)
+            {
+                <div>
+                    <p class="text-muted">Loading...</p>
+                </div>
+            }
+            else
+            {
+                if (chatMessages.Count == 0)
+                {
+                    <div>
+                        <p><i>This chat has no messages</i></p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var msg in chatMessages)
+                    {
+                        if (msg.Sender == "OpenAI")
+                        {
+                            <p class="text-primary">
+                                <b> @msg.Sender </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
+                                <p>@msg.Text</p>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-secondary">
+                                <b> @msg.Sender </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
+                                <p>@msg.Text</p>
+                            </p>
+                        }
+                    }
+                }
+            }
+        }
+            			
+	</div>
+		<!--Prompt Input Row-->
+    <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
+		 <div style="padding:10px" class="border border-secondary rounded" >
+            <input type="text" @bind="@UserPrompt" @oninput="@((e) => { UserPrompt=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+            style="height:24px; overflow-y: hidden; width:calc(100% - 25px);resize: none"></input>
+            <a style="cursor:pointer" @onclick="submitPrompt">
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </a>
+        </div>	
+	</div>				
+</div>
+
+@code {
+
+    List<ChatMessage> chatMessages;
+
+    [Parameter]
+    public string chatSessionId{ get; set; }
+    [Parameter]
+    public string chatSessionName { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (chatSessionId!="404")
+            chatMessages = await chatService.GetChatSessionMessagesAsync(chatSessionId);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await scrollLastChatToView();
+    }
+
+
+    private string UserPrompt { get; set; } 
+
+    private async Task submitPrompt()
+    {
+        //TO-DO: Need a way to capture the sender's name for these chats.
+        // Can you add someplace where user can enter their name? at the top of the chat?
+
+
+        if (chatSessionId == "404" || UserPrompt == "" || UserPrompt==null)
+            return;
+
+        string tempPrompt = UserPrompt;
+        if (UserPrompt!="")
+        {           
+            UserPrompt = "";
+
+        }
+
+        string sender = "test user";
+
+        await chatService.AddChatMessageAsync(chatSessionId, sender, tempPrompt);
+    }
+
+    private async Task scrollLastChatToView()
+    {
+        await JSRuntime.InvokeAsync<bool>("scrollToLastMessage");
+    }
+
+    private string GetChatSessionName()
+    {
+        if (chatSessionId == "404")
+            return "";
+        else
+            return chatSessionName;
+    }
+
+    private string GetPromptVisibility()
+    {
+        if (chatSessionId == "404")
+            return "invisible";
+        else
+            return "";
+    }
+
+}
