@@ -46,20 +46,12 @@
                 {
                     @foreach (var msg in chatMessages)
                     {
-                        if (msg.Sender == "OpenAI")
-                        {
-                            <p class="text-primary">
-                                <b> @msg.Sender </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
-                                <p>@msg.Text</p>
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-secondary">
-                                <b> @msg.Sender </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
-                                <p>@msg.Text</p>
-                            </p>
-                        }
+
+                        <p class="text-primary">
+                            <b> @Participants[msg.Sender] </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
+                            <p>@msg.Text</p>
+                        </p>
+
                     }
                 }
             }
@@ -69,8 +61,21 @@
 		<!--Prompt Input Row-->
     <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
 		 <div style="padding:10px" class="border border-secondary rounded" >
-            <input type="text" @bind="@UserPrompt" @oninput="@((e) => { UserPrompt=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
-            style="height:24px; overflow-y: hidden; width:calc(100% - 25px);resize: none"></input>
+            <!--<input type="text" @bind="@Sender" @oninput="@((e) => { Sender=(string)e.Value;})" rows="1" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+            style="height:24px; overflow-y: hidden; width: 25px;resize: none"></input>-->
+
+             <select @onchange="@((e) => { Sender=(string)e.Value;})" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7" style="height:24px; width: 150px">
+                @if (Participants!=null)
+                {
+                    @foreach (var sender in Participants)
+                    {
+                        <option value="@sender.Key">@sender.Value</option>
+                    }
+                }
+            </select>
+
+            <input type="text" @bind="@UserPrompt" @onkeydown="@Enter" @oninput="@((e) => { UserPrompt=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+            style="height:24px; overflow-y: hidden; width:calc(100% - 175px);resize: none"></input>
             <a style="cursor:pointer" @onclick="submitPrompt">
                 <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -90,19 +95,39 @@
     [Parameter]
     public string chatSessionName { get; set; }
 
+
+    //void UpdateSender(ChangeEventArgs e)
+    //{
+    //    Sender = e.Value.ToString();
+    //}
+
+    public async void Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await submitPrompt();
+        }
+    }
     protected override async Task OnParametersSetAsync()
     {
         if (chatSessionId!="404")
             chatMessages = await chatService.GetChatSessionMessagesAsync(chatSessionId);
+
+        Participants = await chatService.GetAllChatParticipants();
+
+        Sender = Participants.ElementAt(0).Value;
     }
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await scrollLastChatToView();
     }
+    protected Dictionary<string, string> Participants = new Dictionary<string,string>();
 
-
+    private string Sender { get; set; }
     private string UserPrompt { get; set; } 
+
 
     private async Task submitPrompt()
     {
@@ -120,9 +145,7 @@
 
         }
 
-        string sender = "test user";
-
-        await chatService.AddChatMessageAsync(chatSessionId, sender, tempPrompt);
+        await chatService.AddChatMessageAsync(chatSessionId, Sender, tempPrompt);
     }
 
     private async Task scrollLastChatToView()
