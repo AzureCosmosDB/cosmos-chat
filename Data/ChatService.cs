@@ -45,6 +45,25 @@ namespace cosmoschat.Data
             return chatSessions;
         }
 
+        // Returns list of all participants in the chat
+        public async Task<Dictionary<string,string>> GetAllChatParticipants()
+        {
+            //generating faking data 
+            Dictionary<string,string> participants= new Dictionary<string,string>();
+            participants.Add("tom", "Tom");
+            participants.Add("alice", "Alice");
+            participants.Add("karim", "Karim");
+            participants.Add("joe", "Joe");
+            participants.Add("mohan", "Mohan");
+            participants.Add("kim", "Kim");
+            participants.Add("max", "Max");
+
+            return participants;
+
+        }
+                     
+
+
         //Returns the chat messages to display on the main web page when the user selects a chat from the left-hand nav
         public async Task<List<ChatMessage>> GetChatSessionMessagesAsync(string chatSessionId)
         {
