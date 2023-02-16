@@ -1,8 +1,13 @@
 ﻿@using cosmoschat.Data
+@using Microsoft.AspNetCore.SignalR.Client;
+
 @inject ChatService chatService
 @inject NavigationManager UriHelper
 
 
+@using cosmoschat.Data
+@using Newtonsoft.Json
+@inject NavigationManager navigationManager
 
 
 @if (chatSessions != null)
@@ -20,7 +25,7 @@
             <div>
                 <nav class="flex-column">
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" Match="NavLinkMatch.All" @onclick="@(e => NewChat())">
+                        <NavLink style="cursor:pointer" class="nav-link" Match="NavLinkMatch.All" @onclick="@(e => NewChat())">
                             <span class="oi oi-plus" aria-hidden="true"></span> New Chat
                         </NavLink>
                     </div>
@@ -58,7 +63,7 @@
 
                      }
 
-                   @LoadChat(idOpenSession,nameOpenSession);
+                   @LoadChat(OpenSessionID,OpenSessionName);
             </div>
         </div>
     </div>
@@ -70,7 +75,7 @@
 @if (ConfirmationIsOpen)
 {
     <Confirmation Caption="Delete an chat"
-        Message="@message"
+        Message="@UIMessageText"
         OnClose="@OnConfirmationClose"
         Type="Confirmation.Category.DeleteNot">
     </Confirmation>
@@ -81,7 +86,7 @@
 @if (InputIsOpen)
 {
     <Input Caption="Rename an chat"
-              Value="@message"
+              Value="@UIMessageText"
               OnClose="@OnInputClose" >
     </Input>
 }
@@ -90,18 +95,69 @@
 
 @code {
 
-    private string idOpenSession;
-    private string nameOpenSession;
+    private string OpenSessionID;
+    private string OpenSessionName;
 
-    private string idSession;
-    private string message;
+    private string SessionID;
+    private string UIMessageText;
     private bool ConfirmationIsOpen = false;
+
+    private string HubUrl;
+    private HubConnection ChatHubConnection;
+
+    public async Task ConnectSignalR()
+    {
+        //close any existing connections
+        if (ChatHubConnection != null)
+        {
+            await ChatHubConnection.StopAsync();
+            await ChatHubConnection.DisposeAsync();
+        }
+
+        // Create the chat client
+        string baseUrl = navigationManager.BaseUri;
+
+        HubUrl = baseUrl.TrimEnd('/') + ChatHub.HubUrl ;
+
+        ChatHubConnection = new HubConnectionBuilder()
+            .WithUrl(HubUrl)
+            .Build();
+
+        ChatHubConnection.On("BroadcastSession", ReceiveBroadcastedSession);
+
+        await ChatHubConnection.StartAsync();
+
+    }
+
+    private async Task ReceiveBroadcastedSession()
+    {
+        //if (chatSessionId == ChatSessionId)
+        //{
+        //    var msg = JsonConvert.DeserializeObject<ChatRow>(messageJSON);
+        //    MessagesInChat.Add(msg);
+
+        chatSessions = await chatService.GetAllChatSessionsAsync();
+        if (chatSessions != null & chatSessions.Count > 0)
+        {
+            OpenSessionID = chatSessions.FirstOrDefault().ChatSessionId;
+            OpenSessionName = chatSessions.FirstOrDefault().ChatSessionName;
+        }
+        else
+        {
+            OpenSessionID = "";
+            OpenSessionName = "";
+        }
+        // Inform blazor the UI needs updating
+        await InvokeAsync(StateHasChanged);
+        //}
+
+    }
 
     private void OpenConfirmation(string id, string title)
     {
         ConfirmationIsOpen = true;
-        idSession = id;
-        message = "Do you want to delete the chat \""
+        SessionID = id;
+        UIMessageText = "Do you want to delete the chat \""
                   + title + "\"?";
     }
     private async Task OnConfirmationClose(bool isOk)
@@ -109,20 +165,12 @@
         if (isOk)
         {
             ConfirmationIsOpen = false;
-            await chatService.DeleteChatSessionAsync(idSession);
-
-            if (chatSessions != null & chatSessions.Count > 0)
-            {
-                idOpenSession = chatSessions.FirstOrDefault().ChatSessionId;
-                nameOpenSession = chatSessions.FirstOrDefault().ChatSessionName;
-            }
-            else
-            {
-                idOpenSession = "";
-                nameOpenSession = "";
-            }
+            await chatService.DeleteChatSessionAsync(SessionID);
+ 
+            await ChatHubConnection.SendAsync("BroadcastSession");
         }
         ConfirmationIsOpen = false;
+
     }
 
     private bool InputIsOpen = false;
@@ -130,15 +178,15 @@
     private void OpenInput(string id, string title)
     {
         InputIsOpen = true;
-        idSession = id;
-        message = title;
+        SessionID = id;
+        UIMessageText = title;
     }
     private async Task OnInputClose(string newName)
     {
         if (newName!="")
         {
-            await chatService.RenameChatSessionAsync(idSession,newName);
-
+            await chatService.RenameChatSessionAsync(SessionID,newName);
+            await ChatHubConnection.SendAsync("BroadcastSession");
         }
         InputIsOpen = false;
     }
@@ -146,6 +194,7 @@
     private async Task NewChat()
     {
         await chatService.CreateNewChatSessionAsync();
+        await ChatHubConnection.SendAsync("BroadcastSession");
     }
 
 
@@ -153,12 +202,12 @@
 
     protected override async Task OnParametersSetAsync()
     {
-
+        await ConnectSignalR();
         chatSessions = await chatService.GetAllChatSessionsAsync();
         if (chatSessions != null & chatSessions.Count>0)
         {
-            idOpenSession = chatSessions.FirstOrDefault().ChatSessionId;
-            nameOpenSession = chatSessions.FirstOrDefault().ChatSessionName;
+            OpenSessionID = chatSessions.FirstOrDefault().ChatSessionId;
+            OpenSessionName = chatSessions.FirstOrDefault().ChatSessionName;
         }
 
     }
@@ -169,8 +218,8 @@
     {
         if (chatSessions.Count > 0)
         {
-            idOpenSession = sessionId;
-            nameOpenSession = sessionName;
+            OpenSessionID = sessionId;
+            OpenSessionName = sessionName;
             if (sessionId!=null & sessionId != "" & sessionName != "")
                     UriHelper.NavigateTo($"showchat/{sessionId}/{sessionName}");
         }
@@ -183,7 +232,7 @@
 
     private string highlightActiveChat(string sessionId)
     {
-        if (sessionId != idOpenSession)
+        if (sessionId != OpenSessionID)
             return "btn-primary";
         else
             return "btn-info";
