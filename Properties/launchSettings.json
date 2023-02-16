@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "CosmosDB-ChatGPT": {
+    "cosmos-chat": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
