@@ -126,7 +126,7 @@ namespace cosmoschat.Data
 
 
         // Post messsage to the chat session and insert into Cosmos.
-        public async Task AddChatMessageAsync(string chatSessionId, string sender, string text)
+        public async Task <ChatMessage> AddChatMessageAsync(string chatSessionId, string sender, string text)
         {
             ChatMessage chatMessage = new ChatMessage(chatSessionId, sender, text);
 
@@ -134,7 +134,7 @@ namespace cosmoschat.Data
 
             chatSessions[index].AddMessage(chatMessage);
 
-            await cosmos.InsertChatMessageAsync(chatMessage);
+            return await cosmos.InsertChatMessageAsync(chatMessage);
 
         }
     }

@@ -71,4 +71,18 @@ namespace cosmoschat.Data
 
         }
     }
+
+    public class ChatRow
+    {
+        public ChatRow(string sender, string text, DateTime timeStamp)
+        {
+            Sender = sender;
+            Text = text;
+            TimeStamp = timeStamp;
+        }
+
+        public string Sender { get; set; }
+        public string Text { get; set; }
+        public DateTime TimeStamp { get; set; }
+    }
 }

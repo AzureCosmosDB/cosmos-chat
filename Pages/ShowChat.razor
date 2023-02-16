@@ -1,10 +1,13 @@
 ﻿@page "/showchat/{chatSessionId}/{chatSessionName}"
 @page "/nochatsavailable/{chatSessionId}"
 
+@using Microsoft.AspNetCore.SignalR.Client;
 @using cosmoschat.Data
+@using Newtonsoft.Json
+
 @inject ChatService chatService
 @inject IJSRuntime JSRuntime
-
+@inject NavigationManager navigationManager
 
 <PageTitle>Chat Messages</PageTitle>
 
@@ -15,7 +18,7 @@
 	 </div>
 	<!--Content Row-->
     <div class="flex-column justify-content-center p-4 flex-grow-1 overflow-auto" id="chatmessagesdiv">
-        @if (chatSessionId=="404")
+        @if (ChatSessionId=="404")
         {
             <div class="alert alert-secondary mt-4">
                 <span class="oi oi-envelope-open me-2" aria-hidden="true"></span>
@@ -28,7 +31,7 @@
         }
         else
         {
-            if (chatMessages == null)
+            if (MessagesInChat == null)
             {
                 <div>
                     <p class="text-muted">Loading...</p>
@@ -36,7 +39,7 @@
             }
             else
             {
-                if (chatMessages.Count == 0)
+                if (MessagesInChat.Count == 0)
                 {
                     <div>
                         <p><i>This chat has no messages</i></p>
@@ -44,7 +47,7 @@
                 }
                 else
                 {
-                    @foreach (var msg in chatMessages)
+                    @foreach (var msg in MessagesInChat)
                     {
 
                         <p class="text-primary">
@@ -61,8 +64,6 @@
 		<!--Prompt Input Row-->
     <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
 		 <div style="padding:10px" class="border border-secondary rounded" >
-            <!--<input type="text" @bind="@Sender" @oninput="@((e) => { Sender=(string)e.Value;})" rows="1" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
-            style="height:24px; overflow-y: hidden; width: 25px;resize: none"></input>-->
 
              <select @onchange="@((e) => { Sender=(string)e.Value;})" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7" style="height:24px; width: 150px">
                 @if (Participants!=null)
@@ -74,9 +75,9 @@
                 }
             </select>
 
-            <input type="text" @bind="@UserPrompt" @onkeydown="@Enter" @oninput="@((e) => { UserPrompt=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+            <input type="text" @bind="@MessageText" @onkeydown="@OnEnterAsync" @oninput="@((e) => { MessageText=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
             style="height:24px; overflow-y: hidden; width:calc(100% - 175px);resize: none"></input>
-            <a style="cursor:pointer" @onclick="submitPrompt">
+            <a style="cursor:pointer" @onclick="SendMessageAsync">
                 <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -88,82 +89,146 @@
 
 @code {
 
-    List<ChatMessage> chatMessages;
 
     [Parameter]
-    public string chatSessionId{ get; set; }
+    public string ChatSessionId { get; set; }
     [Parameter]
-    public string chatSessionName { get; set; }
+    public string ChatSessionName { get; set; }
 
 
-    //void UpdateSender(ChangeEventArgs e)
+    // list of messages in chat
+    private List<ChatRow> MessagesInChat = new List<ChatRow>();
+
+    private string Sender { get; set; }
+    private string MessageText { get; set; } 
+
+    private Dictionary<string, string> Participants = new Dictionary<string, string>();
+
+    private string HubUrl;
+    private HubConnection ChatHubConnection;
+
+    public async Task ConnectSignalR()
+    {
+        //close any existing connections
+        if (ChatHubConnection != null)
+        {
+            await ChatHubConnection.StopAsync();
+            await ChatHubConnection.DisposeAsync();
+        }
+
+
+        //remove old messages if any
+        MessagesInChat.Clear();
+
+        // Create the chat client
+        string baseUrl = navigationManager.BaseUri;
+
+        HubUrl = baseUrl.TrimEnd('/') + ChatHub.HubUrl ;
+
+        ChatHubConnection = new HubConnectionBuilder()
+            .WithUrl(HubUrl)
+            .Build();
+
+        ChatHubConnection.On<string, string>("BroadcastMessage", ReceiveBroadcastedMessage);
+
+        await ChatHubConnection.StartAsync();
+
+    }
+
+    private void ReceiveBroadcastedMessage(string chatSessionId, string messageJSON)
+    {
+        if (chatSessionId == ChatSessionId)
+        {
+            var msg = JsonConvert.DeserializeObject<ChatRow>(messageJSON);
+                MessagesInChat.Add(msg);
+
+            // Inform blazor the UI needs updating
+            InvokeAsync(StateHasChanged);
+        }
+        
+    }
+
+    //private async Task DisconnectAsync()
     //{
-    //    Sender = e.Value.ToString();
+    //    if (_isChatting)
+    //    {
+    //        await SendMessageAsync($"[Notice] {_username} left chat room.");
+
+    //        await ChatHubConnection.StopAsync();
+    //        await ChatHubConnection.DisposeAsync();
+
+    //        ChatHubConnection = null;
+    //        _isChatting = false;
+    //    }
     //}
 
-    public async void Enter(KeyboardEventArgs e)
+
+
+    public async void OnEnterAsync(KeyboardEventArgs e)
     {
         if (e.Code == "Enter" || e.Code == "NumpadEnter")
         {
-            await submitPrompt();
+            await SendMessageAsync();
         }
     }
     protected override async Task OnParametersSetAsync()
     {
-        if (chatSessionId!="404")
-            chatMessages = await chatService.GetChatSessionMessagesAsync(chatSessionId);
+        if (ChatSessionId != "404")
+        {
+            await ConnectSignalR();
 
-        Participants = await chatService.GetAllChatParticipants();
+            List<ChatMessage> ArchivedChatMessages = await chatService.GetChatSessionMessagesAsync(ChatSessionId);
+            foreach(var msg in ArchivedChatMessages)
+            {
+                MessagesInChat.Add(new ChatRow(msg.Sender, msg.Text, msg.TimeStamp));
+            }
 
-        Sender = Participants.ElementAt(0).Value;
+            Participants = await chatService.GetAllChatParticipants();
+
+            Sender = Participants.ElementAt(0).Key;
+        }
     }
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await scrollLastChatToView();
+        await ScrollLastChatToViewAsync();
     }
-    protected Dictionary<string, string> Participants = new Dictionary<string,string>();
+    
 
-    private string Sender { get; set; }
-    private string UserPrompt { get; set; } 
-
-
-    private async Task submitPrompt()
+    private async Task SendMessageAsync()
     {
-        //TO-DO: Need a way to capture the sender's name for these chats.
-        // Can you add someplace where user can enter their name? at the top of the chat?
 
-
-        if (chatSessionId == "404" || UserPrompt == "" || UserPrompt==null)
+        if (ChatSessionId == "404" || MessageText == "" || MessageText==null)
             return;
 
-        string tempPrompt = UserPrompt;
-        if (UserPrompt!="")
+        string tempPrompt = MessageText;
+        if (MessageText!="")
         {           
-            UserPrompt = "";
+            MessageText = "";
 
         }
-
-        await chatService.AddChatMessageAsync(chatSessionId, Sender, tempPrompt);
+        var chatMessage = await chatService.AddChatMessageAsync(ChatSessionId, Sender, tempPrompt);
+        await ChatHubConnection.SendAsync("BroadcastMessage", chatMessage.ChatSessionId, chatMessage.Sender, chatMessage.Text,chatMessage.TimeStamp);
+       
     }
 
-    private async Task scrollLastChatToView()
+    private async Task ScrollLastChatToViewAsync()
     {
         await JSRuntime.InvokeAsync<bool>("scrollToLastMessage");
     }
 
     private string GetChatSessionName()
     {
-        if (chatSessionId == "404")
+        if (ChatSessionId == "404")
             return "";
         else
-            return chatSessionName;
+            return ChatSessionName;
     }
 
     private string GetPromptVisibility()
     {
-        if (chatSessionId == "404")
+        if (ChatSessionId == "404")
             return "invisible";
         else
             return "";
