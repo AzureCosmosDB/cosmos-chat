@@ -12,6 +12,11 @@ namespace cosmoschat.Data
     {
         public const string HubUrl = "/chat";
 
+        
+        public async Task BroadcastSession()
+        {
+            await Clients.All.SendAsync("BroadcastSession");
+        }
 
         public async Task BroadcastMessage(string chatSessionId, string sender, string text,DateTime postedOn)
         {       
