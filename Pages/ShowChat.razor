@@ -90,8 +90,11 @@
 		<!--Prompt Input Row-->
     <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
 		 <div style="padding:10px" class="border border-secondary rounded" >
-
-            <input type="text" @bind="@MessageText" @onkeydown="@OnEnter" @oninput="@((e) => { MessageText=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+            <!--
+            <EditForm Model="Input">
+                <InputText @bind-Value="Input.Text" @oninput="HandleInputTextInput" />
+            </EditForm>-->
+            <input type="text" @bind="@MessageTextBound" @onkeydown="@OnEnter" @oninput="@((e) => { MessageTextRead=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
             style="height:24px; overflow-y: hidden; width:calc(100% - 25px);resize: none"></input>
             <a style="cursor:pointer" @onclick="PostMessage">
                 <span class="oi oi-share" aria-hidden="true"></span>
@@ -101,7 +104,7 @@
 </div>
 
 @code {
-
+   
 
     [Parameter]
     public string ChatSessionId { get; set; }
@@ -113,7 +116,8 @@
     private List<ChatRow> MessagesInChat = new List<ChatRow>();
 
     private string Sender { get; set; }
-    private string MessageText { get; set; } 
+    private string MessageTextBound { get; set; } 
+    private string MessageTextRead { get; set; }
 
     private Dictionary<string, string> Participants = new Dictionary<string, string>();
 
@@ -179,7 +183,6 @@
     //}
 
 
-
     public void OnEnter(KeyboardEventArgs e)
     {
         if (e.Code == "Enter" || e.Code == "NumpadEnter")
@@ -201,7 +204,8 @@
 
             Participants = await chatService.GetAllChatParticipants();
 
-            Sender = Participants.ElementAt(0).Key;
+            if (Sender==null)
+                Sender = Participants.ElementAt(0).Key;
 
             LoadingComplete = true;
         }
@@ -217,16 +221,15 @@
        
     private void PostMessage()
     {
-        if (ChatSessionId == "404" || MessageText == "" || MessageText==null)
+        if (ChatSessionId == "404" || MessageTextRead == "" || MessageTextRead == null)
             return;
 
-        string tempPrompt = MessageText;
-        if (MessageText!="")
+        if (MessageTextRead!="")
         {           
-            MessageText = "";
+            MessageTextBound = "";
 
         }
-        Task.Run(async () => await SendMessageAsync(tempPrompt));
+        Task.Run(async () => await SendMessageAsync(MessageTextRead));
     }
     private async Task SendMessageAsync(string messagetext)
     {
