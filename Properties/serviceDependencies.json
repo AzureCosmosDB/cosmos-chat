@@ -2,7 +2,7 @@
   "dependencies": {
     "signalr1": {
       "type": "signalr",
-      "connectionId": "Azure:SignalR:ConnectionString",
+      "connectionId": "Azure:SignalR:ConnectionString", 
       "dynamicId": null
     }
   }
