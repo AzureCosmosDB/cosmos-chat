@@ -1,5 +1,6 @@
 ﻿@page "/showchat/{chatSessionId}/{chatSessionName}"
 @page "/nochatsavailable/{chatSessionId}"
+@page "/"
 
 @using Microsoft.AspNetCore.SignalR.Client;
 @using cosmoschat.Data
@@ -14,14 +15,35 @@
 <div class="h-100 d-flex flex-column overflow-hidden">
 	<!--Header Row-->
     <div class="flex-column bg-light">
-        <div class="p-2" style="height:55px"><h2 class="text-dark">@GetChatSessionName()</h2></div>
+        
+        <div class="p-2 d-flex flex-row" style="height:55px">
+            <div class="flex-row justify-content-center flex-grow-1">
+                <h4 class="text-dark py-2">@GetChatSessionName()</h4>
+            </div>
+            <div style="min-width:125px">
+                <select @onchange="@((e) => { Sender=(string)e.Value;})" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7" style="height:24px; min-width:25px">
+                    @if (Participants != null)
+                    {
+                        @foreach (var sender in Participants)
+                        {
+                            <option value="@sender.Key">@sender.Value</option>
+                        }
+                    }
+                </select>
+
+                <span class="oi oi-person me-2" aria-hidden="true"></span>
+            </div>
+        </div>
+
+
+
 	 </div>
 	<!--Content Row-->
     <div class="flex-column justify-content-center p-4 flex-grow-1 overflow-auto" id="chatmessagesdiv">
         @if (ChatSessionId=="404")
         {
-            <div class="alert alert-secondary mt-4">
-                <span class="oi oi-envelope-open me-2" aria-hidden="true"></span>
+            <div class="alert alert-primary mt-4">
+                <span class="oi oi-lightbulb me-2" aria-hidden="true"></span>
                 <strong>No Chats Available</strong>
 
                 <span class="text-nowrap">
@@ -31,18 +53,22 @@
         }
         else
         {
-            if (MessagesInChat == null)
+            if (MessagesInChat == null || LoadingComplete==false)
             {
-                <div>
-                    <p class="text-muted">Loading...</p>
-                </div>
+               <div class="alert alert-info mt-4">
+                    <span class="oi oi-data-transfer-download me-2" aria-hidden="true"></span>
+                    Please wait while your chat loads.
+            </div>
             }
             else
             {
                 if (MessagesInChat.Count == 0)
                 {
-                    <div>
-                        <p><i>This chat has no messages</i></p>
+                    <div class="alert alert-info mt-4">
+                        <span class="oi oi-envelope-open me-2" aria-hidden="true"></span>
+                        <span class="text-nowrap">
+                            This chat has no messages.
+                        </span>
                     </div>
                 }
                 else
@@ -64,31 +90,21 @@
 		<!--Prompt Input Row-->
     <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
 		 <div style="padding:10px" class="border border-secondary rounded" >
-
-             <select @onchange="@((e) => { Sender=(string)e.Value;})" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7" style="height:24px; width: 150px">
-                @if (Participants!=null)
-                {
-                    @foreach (var sender in Participants)
-                    {
-                        <option value="@sender.Key">@sender.Value</option>
-                    }
-                }
-            </select>
-
-            <input type="text" @bind="@MessageText" @onkeydown="@OnEnterAsync" @oninput="@((e) => { MessageText=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
-            style="height:24px; overflow-y: hidden; width:calc(100% - 175px);resize: none"></input>
-            <a style="cursor:pointer" @onclick="SendMessageAsync">
-                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
+            <!--
+            <EditForm Model="Input">
+                <InputText @bind-Value="Input.Text" @oninput="HandleInputTextInput" />
+            </EditForm>-->
+            <input type="text" @bind="@MessageTextBound" @onkeydown="@OnEnter" @oninput="@((e) => { MessageTextRead=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+            style="height:24px; overflow-y: hidden; width:calc(100% - 25px);resize: none"></input>
+            <a style="cursor:pointer" @onclick="PostMessage">
+                <span class="oi oi-share" aria-hidden="true"></span>
             </a>
         </div>	
 	</div>				
 </div>
 
 @code {
-
+   
 
     [Parameter]
     public string ChatSessionId { get; set; }
@@ -100,12 +116,16 @@
     private List<ChatRow> MessagesInChat = new List<ChatRow>();
 
     private string Sender { get; set; }
-    private string MessageText { get; set; } 
+    private string MessageTextBound { get; set; } 
+    private string MessageTextRead { get; set; }
 
     private Dictionary<string, string> Participants = new Dictionary<string, string>();
 
     private string HubUrl;
     private HubConnection ChatHubConnection;
+
+    private bool LoadingComplete;
+
 
     public async Task ConnectSignalR()
     {
@@ -140,12 +160,12 @@
         if (chatSessionId == ChatSessionId)
         {
             var msg = JsonConvert.DeserializeObject<ChatRow>(messageJSON);
-                MessagesInChat.Add(msg);
+            MessagesInChat.Add(msg);
 
             // Inform blazor the UI needs updating
             InvokeAsync(StateHasChanged);
         }
-        
+
     }
 
     //private async Task DisconnectAsync()
@@ -163,30 +183,33 @@
     //}
 
 
-
-    public async void OnEnterAsync(KeyboardEventArgs e)
+    public void OnEnter(KeyboardEventArgs e)
     {
         if (e.Code == "Enter" || e.Code == "NumpadEnter")
         {
-            await SendMessageAsync();
+            PostMessage();
         }
     }
     protected override async Task OnParametersSetAsync()
     {
-        if (ChatSessionId != "404")
+        if (ChatSessionId != "404" & ChatSessionId!=null)
         {
             await ConnectSignalR();
 
             List<ChatMessage> ArchivedChatMessages = await chatService.GetChatSessionMessagesAsync(ChatSessionId);
-            foreach(var msg in ArchivedChatMessages)
+            foreach (var msg in ArchivedChatMessages)
             {
                 MessagesInChat.Add(new ChatRow(msg.Sender, msg.Text, msg.TimeStamp));
             }
 
             Participants = await chatService.GetAllChatParticipants();
 
-            Sender = Participants.ElementAt(0).Key;
+            if (Sender==null)
+                Sender = Participants.ElementAt(0).Key;
+
+            LoadingComplete = true;
         }
+ 
     }
 
 
@@ -195,20 +218,22 @@
         await ScrollLastChatToViewAsync();
     }
     
-
-    private async Task SendMessageAsync()
+       
+    private void PostMessage()
     {
-
-        if (ChatSessionId == "404" || MessageText == "" || MessageText==null)
+        if (ChatSessionId == "404" || MessageTextRead == "" || MessageTextRead == null)
             return;
 
-        string tempPrompt = MessageText;
-        if (MessageText!="")
+        if (MessageTextRead!="")
         {           
-            MessageText = "";
+            MessageTextBound = "";
 
         }
-        var chatMessage = await chatService.AddChatMessageAsync(ChatSessionId, Sender, tempPrompt);
+        Task.Run(async () => await SendMessageAsync(MessageTextRead));
+    }
+    private async Task SendMessageAsync(string messagetext)
+    {
+        var chatMessage = await chatService.AddChatMessageAsync(ChatSessionId, Sender, messagetext);
         await ChatHubConnection.SendAsync("BroadcastMessage", chatMessage.ChatSessionId, chatMessage.Sender, chatMessage.Text,chatMessage.TimeStamp);
        
     }
@@ -228,7 +253,7 @@
 
     private string GetPromptVisibility()
     {
-        if (ChatSessionId == "404")
+        if (ChatSessionId == "404" || ChatSessionId == null || LoadingComplete==false)
             return "invisible";
         else
             return "";
