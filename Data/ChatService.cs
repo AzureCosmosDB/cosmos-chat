@@ -45,22 +45,6 @@ namespace cosmoschat.Data
             return chatSessions;
         }
 
-        // Returns list of all participants in the chat
-        public async Task<Dictionary<string,string>> GetAllChatParticipants()
-        {
-            //generating faking data 
-            Dictionary<string,string> participants= new Dictionary<string,string>();
-            participants.Add("tom", "Tom");
-            participants.Add("alice", "Alice");
-            participants.Add("karim", "Karim");
-            participants.Add("joe", "Joe");
-            participants.Add("mohan", "Mohan");
-            participants.Add("kim", "Kim");
-            participants.Add("max", "Max");
-
-            return participants;
-
-        }
                      
 
 
@@ -126,7 +110,7 @@ namespace cosmoschat.Data
 
 
         // Post messsage to the chat session and insert into Cosmos.
-        public async Task AddChatMessageAsync(string chatSessionId, string sender, string text)
+        public async Task <ChatMessage> AddChatMessageAsync(string chatSessionId, string sender, string text)
         {
             ChatMessage chatMessage = new ChatMessage(chatSessionId, sender, text);
 
@@ -134,7 +118,7 @@ namespace cosmoschat.Data
 
             chatSessions[index].AddMessage(chatMessage);
 
-            await cosmos.InsertChatMessageAsync(chatMessage);
+            return await cosmos.InsertChatMessageAsync(chatMessage);
 
         }
     }

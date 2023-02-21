@@ -10,7 +10,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <input class="w-100" type="text" @bind="@Value" @oninput="@((e) => { Value=(string)e.Value;})" />
+                <input class="w-100" type="text" @bind="@Value" @oninput="@((e) => { UpdatedValue=(string)e.Value;})" />
             </div>
             <div class="modal-footer">                
                 <button type="button" class="btn btn-primary"
@@ -29,6 +29,8 @@
 @code {
     [Parameter] public string Caption { get; set; }
     [Parameter] public string Value { get; set; }
+    private string UpdatedValue { get; set; }
+
     [Parameter] public EventCallback<string> OnClose { get; set; }
 
     private Task Cancel()
@@ -37,7 +39,7 @@
     }
     private Task Ok()
     {
-        return OnClose.InvokeAsync(Value);
+        return OnClose.InvokeAsync(UpdatedValue);
     }
 
 }
