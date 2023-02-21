@@ -20,18 +20,12 @@
             <div class="flex-row justify-content-center flex-grow-1">
                 <h4 class="text-dark py-2">@GetChatSessionName()</h4>
             </div>
-            <div style="min-width:125px">
-                <select @onchange="@((e) => { Sender=(string)e.Value;})" placeholder="Sender" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7" style="height:24px; min-width:25px">
-                    @if (Participants != null)
-                    {
-                        @foreach (var sender in Participants)
-                        {
-                            <option value="@sender.Key">@sender.Value</option>
-                        }
-                    }
-                </select>
-
+            <div style="min-width:150px">
                 <span class="oi oi-person me-2" aria-hidden="true"></span>
+                <input type="text" @oninput="@((e) => { Sender=(string)e.Value;})" rows="1" placeholder="<Your Name>" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+                       style="height:24px; overflow-y: hidden; width:100px;resize: none"></input>
+
+               
             </div>
         </div>
 
@@ -77,7 +71,7 @@
                     {
 
                         <p class="text-primary">
-                            <b> @Participants[msg.Sender] </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
+                            <b> @msg.Sender </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
                             <p>@msg.Text</p>
                         </p>
 
@@ -90,11 +84,8 @@
 		<!--Prompt Input Row-->
     <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
 		 <div style="padding:10px" class="border border-secondary rounded" >
-            <!--
-            <EditForm Model="Input">
-                <InputText @bind-Value="Input.Text" @oninput="HandleInputTextInput" />
-            </EditForm>-->
-            <input type="text" @bind="@MessageTextBound" @onkeydown="@OnEnter" @oninput="@((e) => { MessageTextRead=(string)e.Value;})" rows="1" placeholder="Prompt comes here" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+
+            <input type="text" @bind="@MessageTextSet" @onkeydown="@OnEnter" @oninput="@((e) => { MessageTextGet=(string)e.Value;})" rows="1" placeholder="<Your Message>" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
             style="height:24px; overflow-y: hidden; width:calc(100% - 25px);resize: none"></input>
             <a style="cursor:pointer" @onclick="PostMessage">
                 <span class="oi oi-share" aria-hidden="true"></span>
@@ -104,7 +95,7 @@
 </div>
 
 @code {
-   
+
 
     [Parameter]
     public string ChatSessionId { get; set; }
@@ -115,11 +106,13 @@
     // list of messages in chat
     private List<ChatRow> MessagesInChat = new List<ChatRow>();
 
-    private string Sender { get; set; }
-    private string MessageTextBound { get; set; } 
-    private string MessageTextRead { get; set; }
 
-    private Dictionary<string, string> Participants = new Dictionary<string, string>();
+    private string Sender { get; set; }
+
+
+    private string MessageTextSet { get; set; } 
+    private string MessageTextGet { get; set; }
+
 
     private string HubUrl;
     private HubConnection ChatHubConnection;
@@ -201,17 +194,18 @@
             {
                 MessagesInChat.Add(new ChatRow(msg.Sender, msg.Text, msg.TimeStamp));
             }
-
-            Participants = await chatService.GetAllChatParticipants();
-
-            if (Sender==null)
-                Sender = Participants.ElementAt(0).Key;
+           
 
             LoadingComplete = true;
         }
  
     }
 
+
+    protected async Task ShowAlert(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", text); // Alert
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -221,15 +215,21 @@
        
     private void PostMessage()
     {
-        if (ChatSessionId == "404" || MessageTextRead == "" || MessageTextRead == null)
+        if (Sender == null || Sender=="")
+        {
+            ShowAlert("Please update sender name.");
+            return;
+        }
+
+        if (ChatSessionId == "404" || MessageTextGet == "" || MessageTextGet == null)
             return;
 
-        if (MessageTextRead!="")
+        if (MessageTextGet!="")
         {           
-            MessageTextBound = "";
+            MessageTextSet = "";
 
         }
-        Task.Run(async () => await SendMessageAsync(MessageTextRead));
+        Task.Run(async () => await SendMessageAsync(MessageTextGet));
     }
     private async Task SendMessageAsync(string messagetext)
     {
