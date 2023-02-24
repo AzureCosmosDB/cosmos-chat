@@ -1,17 +1,8 @@
 ﻿using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Configuration;
-using System.Configuration;
-using System.Collections;
 using System.Collections.ObjectModel;
 using Newtonsoft.Json;
-using System.Linq.Expressions;
-using System;
-using System.ComponentModel;
-using Container = Microsoft.Azure.Cosmos.Container;
-using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 
-namespace cosmoschat.Data
+namespace cosmoschat.Services
 {
     public class CosmosService
     {
@@ -125,7 +116,7 @@ namespace cosmoschat.Data
             public string ChatSessionId { get; set; }
         }
 
-            public async Task<ChatMessage> InsertChatMessageAsync(ChatMessage chatMessage)
+        public async Task<ChatMessage> InsertChatMessageAsync(ChatMessage chatMessage)
         {
 
             return await chatContainer.CreateItemAsync<ChatMessage>(chatMessage, new PartitionKey(chatMessage.ChatSessionId));

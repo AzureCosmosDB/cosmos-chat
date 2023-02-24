@@ -1,10 +1,4 @@
-﻿using System;
-using System.Configuration;
-using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
-
-
-namespace cosmoschat.Data
+﻿namespace cosmoschat.Services
 {
     public class ChatService 
     {
