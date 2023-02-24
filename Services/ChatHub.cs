@@ -14,9 +14,9 @@ namespace cosmoschat.Services
             await Clients.All.SendAsync("BroadcastSession");
         }
 
-        public async Task BroadcastMessage(string chatSessionId, string sender, string text,DateTime postedOn)
-        {       
-            var json = JsonConvert.SerializeObject(new ChatRow(sender, text, postedOn));
+        public async Task BroadcastMessage(string chatSessionId, string id, string sender, string text, DateTime postedOn)
+        {
+            var json = JsonConvert.SerializeObject(new ChatMessage(chatSessionId, id, sender, text, postedOn));
             await Clients.All.SendAsync("BroadcastMessage", chatSessionId, json);
         }
 

@@ -104,7 +104,7 @@
 
 
     // list of messages in chat
-    private List<ChatRow> MessagesInChat = new List<ChatRow>();
+    private List<ChatMessage> MessagesInChat = new List<ChatMessage>();
 
 
     private string Sender { get; set; }
@@ -152,7 +152,7 @@
     {
         if (chatSessionId == ChatSessionId)
         {
-            var msg = JsonConvert.DeserializeObject<ChatRow>(messageJSON);
+            var msg = JsonConvert.DeserializeObject<ChatMessage>(messageJSON);
             MessagesInChat.Add(msg);
 
             // Inform blazor the UI needs updating
@@ -192,7 +192,7 @@
             List<ChatMessage> ArchivedChatMessages = await chatService.GetChatSessionMessagesAsync(ChatSessionId);
             foreach (var msg in ArchivedChatMessages)
             {
-                MessagesInChat.Add(new ChatRow(msg.Sender, msg.Text, msg.TimeStamp));
+                MessagesInChat.Add(new ChatMessage(ChatSessionId, msg.Id, msg.Sender, msg.Text, msg.TimeStamp));
             }
            
 
@@ -234,7 +234,7 @@
     private async Task SendMessageAsync(string messagetext)
     {
         var chatMessage = await chatService.AddChatMessageAsync(ChatSessionId, Sender, messagetext);
-        await ChatHubConnection.SendAsync("BroadcastMessage", chatMessage.ChatSessionId, chatMessage.Sender, chatMessage.Text,chatMessage.TimeStamp);
+        await ChatHubConnection.SendAsync("BroadcastMessage", chatMessage.ChatSessionId, chatMessage.Id, chatMessage.Sender, chatMessage.Text, chatMessage.TimeStamp);
        
     }
 

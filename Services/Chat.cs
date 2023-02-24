@@ -67,19 +67,19 @@ namespace cosmoschat.Services
             this.Text = Text;
 
         }
-    }
 
-    public class ChatRow
-    {
-        public ChatRow(string sender, string text, DateTime timeStamp)
+        [JsonConstructor]
+        public ChatMessage(string ChatSessionId, string id, string Sender, string Text, DateTime timeStamp)
         {
-            Sender = sender;
-            Text = text;
-            TimeStamp = timeStamp;
-        }
 
-        public string Sender { get; set; }
-        public string Text { get; set; }
-        public DateTime TimeStamp { get; set; }
+            this.Id = Guid.NewGuid().ToString();
+            this.Type = "ChatMessage";
+            this.ChatSessionId = ChatSessionId; //partition key
+            this.Sender = Sender;
+            this.TimeStamp = timeStamp;
+            this.Text = Text;
+
+        }
     }
+
 }
