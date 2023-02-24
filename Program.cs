@@ -1,4 +1,4 @@
-using cosmoschat.Data;
+using cosmoschat.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 

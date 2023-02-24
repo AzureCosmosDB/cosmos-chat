@@ -1,11 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using System;
-using System.Net.NetworkInformation;
-using System.Threading.Tasks;
-using cosmoschat.Data;
 using Newtonsoft.Json;
 
-namespace cosmoschat.Data
+namespace cosmoschat.Services
 {
 
     public class ChatHub : Hub

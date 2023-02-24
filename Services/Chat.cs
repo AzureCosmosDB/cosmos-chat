@@ -1,9 +1,6 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 
-namespace cosmoschat.Data
+namespace cosmoschat.Services
 {
 
     public class ChatSession
