@@ -1,0 +1,171 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.14.85.62628",
+      "templateHash": "18310893311222867651"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "chatAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Specifies the name of the chat application."
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "F1",
+      "metadata": {
+        "description": "Specifies app plan SKU"
+      }
+    },
+    "skuCapacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Specifies app plan capacity"
+      }
+    }
+  },
+  "variables": {
+    "cosmosDBAccountName": "[format('{0}-cosmos', parameters('chatAppName'))]",
+    "hostingPlanName": "[format('{0}-hostingplan', parameters('chatAppName'))]",
+    "webSiteName": "[format('{0}-webapp', parameters('chatAppName'))]",
+    "websiteSourceRepository": "https://github.com/AzureCosmosDB/cosmos-chat.git"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2022-08-15",
+      "name": "[variables('cosmosDBAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "databaseAccountOfferType": "Standard",
+        "locations": [
+          {
+            "failoverPriority": 0,
+            "isZoneRedundant": false,
+            "locationName": "[parameters('location')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2022-08-15",
+      "name": "[format('{0}/{1}', variables('cosmosDBAccountName'), 'ChatDatabase')]",
+      "properties": {
+        "resource": {
+          "id": "ChatDatabase"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDBAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2022-08-15",
+      "name": "[format('{0}/{1}/{2}', variables('cosmosDBAccountName'), 'ChatDatabase', 'ChatContainer')]",
+      "properties": {
+        "resource": {
+          "id": "ChatContainer",
+          "partitionKey": {
+            "paths": [
+              "/chatSessionId"
+            ],
+            "kind": "Hash",
+            "version": 2
+          },
+          "indexingPolicy": {
+            "indexingMode": "Consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/\"_etag\"/?"
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDBAccountName'), 'ChatDatabase')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2020-12-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('skuName')]",
+        "capacity": "[parameters('skuCapacity')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDBAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2020-12-01",
+      "name": "[variables('webSiteName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "CosmosUri",
+              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDBAccountName')), '2022-08-15').documentEndpoint]"
+            },
+            {
+              "name": "CosmosKey",
+              "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDBAccountName')), '2022-08-15').primaryMasterKey]"
+            },
+            {
+              "name": "CosmosDatabase",
+              "value": "ChatDatabase"
+            },
+            {
+              "name": "CosmosCollection",
+              "value": "ChatContainer"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDBAccountName'))]",
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/sourcecontrols",
+      "apiVersion": "2020-12-01",
+      "name": "[format('{0}/web', variables('webSiteName'))]",
+      "properties": {
+        "repoUrl": "[variables('websiteSourceRepository')]",
+        "branch": "main",
+        "isManualIntegration": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webSiteName'))]"
+      ]
+    }
+  ]
+}
