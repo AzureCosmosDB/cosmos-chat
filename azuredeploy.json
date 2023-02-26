@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.85.62628",
-      "templateHash": "18310893311222867651"
+      "templateHash": "9582721235758883810"
     }
   },
   "parameters": {
@@ -19,18 +19,32 @@
         "description": "Specifies the name of the chat application."
       }
     },
-    "skuName": {
+    "appServicesSkuName": {
       "type": "string",
       "defaultValue": "F1",
       "metadata": {
-        "description": "Specifies app plan SKU"
+        "description": "Specifies app plan SKU (F1 = Free Tier"
       }
     },
-    "skuCapacity": {
+    "appServicesSkuCapacity": {
       "type": "int",
       "defaultValue": 1,
       "metadata": {
         "description": "Specifies app plan capacity"
+      }
+    },
+    "cosmosFreeTier": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable Cosmos DB Free Tier"
+      }
+    },
+    "cosmosThroughput": {
+      "type": "int",
+      "defaultValue": 400,
+      "metadata": {
+        "description": "Cosmos DB Container Throughput (<1000 for free tier"
       }
     }
   },
@@ -38,7 +52,10 @@
     "cosmosDBAccountName": "[format('{0}-cosmos', parameters('chatAppName'))]",
     "hostingPlanName": "[format('{0}-hostingplan', parameters('chatAppName'))]",
     "webSiteName": "[format('{0}-webapp', parameters('chatAppName'))]",
-    "websiteSourceRepository": "https://github.com/AzureCosmosDB/cosmos-chat.git"
+    "webSourceName": "[format('{0}-source', parameters('chatAppName'))]",
+    "webSiteRepository": "https://github.com/AzureCosmosDB/cosmos-chat.git",
+    "databaseName": "ChatDatabase",
+    "containerName": "ChatContainer"
   },
   "resources": [
     {
@@ -52,6 +69,7 @@
           "defaultConsistencyLevel": "Session"
         },
         "databaseAccountOfferType": "Standard",
+        "enableFreeTier": "[parameters('cosmosFreeTier')]",
         "locations": [
           {
             "failoverPriority": 0,
@@ -64,10 +82,10 @@
     {
       "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
       "apiVersion": "2022-08-15",
-      "name": "[format('{0}/{1}', variables('cosmosDBAccountName'), 'ChatDatabase')]",
+      "name": "[format('{0}/{1}', variables('cosmosDBAccountName'), variables('databaseName'))]",
       "properties": {
         "resource": {
-          "id": "ChatDatabase"
+          "id": "[variables('databaseName')]"
         }
       },
       "dependsOn": [
@@ -77,10 +95,10 @@
     {
       "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
       "apiVersion": "2022-08-15",
-      "name": "[format('{0}/{1}/{2}', variables('cosmosDBAccountName'), 'ChatDatabase', 'ChatContainer')]",
+      "name": "[format('{0}/{1}/{2}', variables('cosmosDBAccountName'), variables('databaseName'), variables('containerName'))]",
       "properties": {
         "resource": {
-          "id": "ChatContainer",
+          "id": "[variables('containerName')]",
           "partitionKey": {
             "paths": [
               "/ChatSessionId"
@@ -93,19 +111,25 @@
             "automatic": true,
             "includedPaths": [
               {
-                "path": "/*"
+                "path": "/ChatSessionId/?"
+              },
+              {
+                "path": "/Type/?"
               }
             ],
             "excludedPaths": [
               {
-                "path": "/\"_etag\"/?"
+                "path": "/*"
               }
             ]
           }
+        },
+        "options": {
+          "throughput": "[parameters('cosmosThroughput')]"
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDBAccountName'), 'ChatDatabase')]"
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDBAccountName'), variables('databaseName'))]"
       ]
     },
     {
@@ -114,12 +138,9 @@
       "name": "[variables('hostingPlanName')]",
       "location": "[parameters('location')]",
       "sku": {
-        "name": "[parameters('skuName')]",
-        "capacity": "[parameters('skuCapacity')]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDBAccountName'))]"
-      ]
+        "name": "[parameters('appServicesSkuName')]",
+        "capacity": "[parameters('appServicesSkuCapacity')]"
+      }
     },
     {
       "type": "Microsoft.Web/sites",
@@ -140,11 +161,11 @@
             },
             {
               "name": "CosmosDatabase",
-              "value": "ChatDatabase"
+              "value": "[variables('databaseName')]"
             },
             {
               "name": "CosmosContainer",
-              "value": "ChatContainer"
+              "value": "[variables('containerName')]"
             }
           ]
         }
@@ -157,9 +178,9 @@
     {
       "type": "Microsoft.Web/sites/sourcecontrols",
       "apiVersion": "2020-12-01",
-      "name": "[format('{0}/web', variables('webSiteName'))]",
+      "name": "[variables('webSourceName')]",
       "properties": {
-        "repoUrl": "[variables('websiteSourceRepository')]",
+        "repoUrl": "[variables('webSiteRepository')]",
         "branch": "main",
         "isManualIntegration": true
       },

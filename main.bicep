@@ -9,14 +9,23 @@ param chatAppName string
 var cosmosDBAccountName = '${chatAppName}-cosmos'
 var hostingPlanName = '${chatAppName}-hostingplan'
 var webSiteName = '${chatAppName}-webapp'
-var websiteSourceRepository = 'https://github.com/AzureCosmosDB/cosmos-chat.git'
+var webSourceName = '${chatAppName}-source'
+var webSiteRepository = 'https://github.com/AzureCosmosDB/cosmos-chat.git'
 
-@description('Specifies app plan SKU')
-param skuName string = 'F1'
+var databaseName = 'ChatDatabase'
+var containerName = 'ChatContainer'
+
+@description('Specifies app plan SKU (F1 = Free Tier')
+param appServicesSkuName string = 'F1'
 
 @description('Specifies app plan capacity')
-param skuCapacity int = 1
+param appServicesSkuCapacity int = 1
 
+@description('Enable Cosmos DB Free Tier')
+param cosmosFreeTier bool = true
+
+@description('Cosmos DB Container Throughput (<1000 for free tier')
+param cosmosThroughput int = 400
 
 resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
   name: cosmosDBAccountName
@@ -27,6 +36,7 @@ resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
       defaultConsistencyLevel: 'Session'
     }
     databaseAccountOfferType: 'Standard'
+    enableFreeTier: cosmosFreeTier
     locations: [
       {
         failoverPriority: 0
@@ -38,21 +48,21 @@ resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
 }
 
 resource database 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-08-15' = {
-  name: 'ChatDatabase'
+  name: databaseName
   parent: cosmosDBAccount
   properties: {
     resource: {
-      id: 'ChatDatabase'
+      id: databaseName
     }
   }
 }
 
 resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
-  name: 'ChatContainer'
+  name: containerName
   parent: database
   properties: {
     resource: {
-      id: 'ChatContainer'
+      id: containerName
       partitionKey: {
         paths: [
           '/ChatSessionId'
@@ -65,15 +75,21 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
         automatic: true
         includedPaths: [
           {
-            path: '/*'
+            path: '/ChatSessionId/?'
+          }
+          {
+            path: '/Type/?'
           }
         ]
         excludedPaths: [
           {
-            path: '/"_etag"/?'
+            path: '/*'
           }
         ]
       }
+    }
+    options:{
+      throughput: cosmosThroughput
     }
   }
 }
@@ -81,13 +97,10 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
 
 resource hostingPlan 'Microsoft.Web/serverfarms@2020-12-01' = {
   name: hostingPlanName
-  dependsOn: [
-    cosmosDBAccount
-  ]
   location: location
   sku: {
-    name: skuName
-    capacity: skuCapacity
+    name: appServicesSkuName
+    capacity: appServicesSkuCapacity
   }
 }
 
@@ -108,11 +121,11 @@ resource webSite 'Microsoft.Web/sites@2020-12-01' = {
         }
         {
           name: 'CosmosDatabase'
-          value: 'ChatDatabase'
+          value: databaseName
         }
         {
           name: 'CosmosContainer'
-          value: 'ChatContainer'
+          value: containerName
         }
       ]
 
@@ -120,10 +133,13 @@ resource webSite 'Microsoft.Web/sites@2020-12-01' = {
   }
 }
 
-resource webSiteSourceControl 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
-  name: '${webSite.name}/web'
+resource webSiteSource 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
+  name: webSourceName
+  dependsOn: [
+	webSite
+  ]
   properties: {
-    repoUrl: websiteSourceRepository
+    repoUrl: webSiteRepository
     branch: 'main'
     isManualIntegration: true
   }
