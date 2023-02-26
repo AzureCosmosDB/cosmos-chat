@@ -55,7 +55,7 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
       id: 'ChatContainer'
       partitionKey: {
         paths: [
-          '/chatSessionId'
+          '/ChatSessionId'
         ]
         kind: 'Hash'
         version: 2
@@ -111,7 +111,7 @@ resource webSite 'Microsoft.Web/sites@2020-12-01' = {
           value: 'ChatDatabase'
         }
         {
-          name: 'CosmosCollection'
+          name: 'CosmosContainer'
           value: 'ChatContainer'
         }
       ]
