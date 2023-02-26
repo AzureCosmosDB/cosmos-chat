@@ -21,7 +21,6 @@ param cosmosContainerThroughput int = 400
 var cosmosDBAccountName = '${chatAppName}-cosmos'
 var hostingPlanName = '${chatAppName}-hostingplan'
 var webSiteName = '${chatAppName}-webapp'
-var webSourceName = '${chatAppName}-source'
 var webSiteRepository = 'https://github.com/AzureCosmosDB/cosmos-chat.git'
 var databaseName = 'ChatDatabase'
 var containerName = 'ChatContainer'
@@ -133,10 +132,7 @@ resource webSite 'Microsoft.Web/sites@2020-12-01' = {
 }
 
 resource webSiteSource 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
-  name: webSourceName
-  dependsOn: [
-	webSite
-  ]
+  name: '${webSite.name}/web'
   properties: {
     repoUrl: webSiteRepository
     branch: 'main'
