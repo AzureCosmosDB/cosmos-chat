@@ -83,7 +83,7 @@
           "id": "ChatContainer",
           "partitionKey": {
             "paths": [
-              "/chatSessionId"
+              "/ChatSessionId"
             ],
             "kind": "Hash",
             "version": 2
@@ -143,7 +143,7 @@
               "value": "ChatDatabase"
             },
             {
-              "name": "CosmosCollection",
+              "name": "CosmosContainer",
               "value": "ChatContainer"
             }
           ]
