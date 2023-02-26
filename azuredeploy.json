@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.85.62628",
-      "templateHash": "9582721235758883810"
+      "templateHash": "6308162049420243316"
     }
   },
   "parameters": {
@@ -16,21 +16,21 @@
     "chatAppName": {
       "type": "string",
       "metadata": {
-        "description": "Specifies the name of the chat application."
+        "description": "Name of the chat application. Needs to be unique for Cosmos DB & App Service"
       }
     },
     "appServicesSkuName": {
       "type": "string",
       "defaultValue": "F1",
       "metadata": {
-        "description": "Specifies app plan SKU (F1 = Free Tier"
+        "description": "Specifies App Service Sku (F1 = Free Tier)"
       }
     },
     "appServicesSkuCapacity": {
       "type": "int",
       "defaultValue": 1,
       "metadata": {
-        "description": "Specifies app plan capacity"
+        "description": "Specifies App Service capacity"
       }
     },
     "cosmosFreeTier": {
@@ -40,11 +40,11 @@
         "description": "Enable Cosmos DB Free Tier"
       }
     },
-    "cosmosThroughput": {
+    "cosmosContainerThroughput": {
       "type": "int",
       "defaultValue": 400,
       "metadata": {
-        "description": "Cosmos DB Container Throughput (<1000 for free tier"
+        "description": "Cosmos DB Container Throughput (<1000 for free tier)"
       }
     }
   },
@@ -125,7 +125,7 @@
           }
         },
         "options": {
-          "throughput": "[parameters('cosmosThroughput')]"
+          "throughput": "[parameters('cosmosContainerThroughput')]"
         }
       },
       "dependsOn": [

@@ -3,29 +3,28 @@ targetScope = 'resourceGroup'
 
 param location string = resourceGroup().location
 
-@description('Specifies the name of the chat application.')
+@description('Name of the chat application. Needs to be unique for Cosmos DB & App Service')
 param chatAppName string
+
+@description('Specifies App Service Sku (F1 = Free Tier)')
+param appServicesSkuName string = 'F1'
+
+@description('Specifies App Service capacity')
+param appServicesSkuCapacity int = 1
+
+@description('Enable Cosmos DB Free Tier')
+param cosmosFreeTier bool = true
+
+@description('Cosmos DB Container Throughput (<1000 for free tier)')
+param cosmosContainerThroughput int = 400
 
 var cosmosDBAccountName = '${chatAppName}-cosmos'
 var hostingPlanName = '${chatAppName}-hostingplan'
 var webSiteName = '${chatAppName}-webapp'
 var webSourceName = '${chatAppName}-source'
 var webSiteRepository = 'https://github.com/AzureCosmosDB/cosmos-chat.git'
-
 var databaseName = 'ChatDatabase'
 var containerName = 'ChatContainer'
-
-@description('Specifies app plan SKU (F1 = Free Tier')
-param appServicesSkuName string = 'F1'
-
-@description('Specifies app plan capacity')
-param appServicesSkuCapacity int = 1
-
-@description('Enable Cosmos DB Free Tier')
-param cosmosFreeTier bool = true
-
-@description('Cosmos DB Container Throughput (<1000 for free tier')
-param cosmosThroughput int = 400
 
 resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
   name: cosmosDBAccountName
@@ -89,7 +88,7 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
       }
     }
     options:{
-      throughput: cosmosThroughput
+      throughput: cosmosContainerThroughput
     }
   }
 }
