@@ -28,8 +28,6 @@ namespace cosmoschat.Services
         }
 
         
-        // First call is made to this when chat page is loaded for left-hand nav.
-        // Only retrieve the chat sessions, not chat messages
         public async Task<List<ChatSession>> GetChatSessionsListAsync()
         {
 
@@ -88,32 +86,23 @@ namespace cosmoschat.Services
         public async Task DeleteChatSessionAsync(string chatSessionId)
         {
             //Retrieve the chat session and all the chat message items for a chat session
-            QueryDefinition query = new QueryDefinition("SELECT c.id, c.ChatSessionId FROM c WHERE c.ChatSessionId = @ID")
-                    .WithParameter("@ID", chatSessionId);
+            QueryDefinition query = new QueryDefinition("SELECT c.id, c.ChatSessionId FROM c WHERE c.ChatSessionId = @Id")
+                    .WithParameter("@Id", chatSessionId);
 
 
-            FeedIterator<ItemResponse> results = chatContainer.GetItemQueryIterator<ItemResponse>(query);
+            FeedIterator<dynamic> results = chatContainer.GetItemQueryIterator<dynamic>(query);
 
             while (results.HasMoreResults)
             {
-                FeedResponse<ItemResponse> response = await results.ReadNextAsync();
-                foreach (ItemResponse responseItem in response)
+                FeedResponse<dynamic> response = await results.ReadNextAsync();
+                foreach (var responseItem in response)
                 {
-                    await chatContainer.DeleteItemAsync<ItemResponse>(id: responseItem.Id, partitionKey: new PartitionKey(responseItem.ChatSessionId));
+                    await chatContainer.DeleteItemAsync<dynamic>(id: responseItem.id, partitionKey: new PartitionKey(responseItem.ChatSessionId));
                 }
 
             }
 
 
-        }
-
-        private class ItemResponse
-        {
-            [JsonProperty(PropertyName = "id")]
-            public string Id { get; set; }
-
-            [JsonProperty(PropertyName = "ChatSessionId")]
-            public string ChatSessionId { get; set; }
         }
 
         public async Task<ChatMessage> InsertChatMessageAsync(ChatMessage chatMessage)
