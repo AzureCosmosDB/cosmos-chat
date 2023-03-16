@@ -3,7 +3,7 @@
     public class ChatService 
     {
 
-        private List<ChatSession> chatSessions= new List<ChatSession>();
+        private static List<ChatSession> chatSessions;//= new List<ChatSession>();
 
         private readonly CosmosService cosmos;
         

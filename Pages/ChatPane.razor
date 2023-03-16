@@ -1,0 +1,245 @@
+﻿@using cosmoschat.Services
+@inject ChatService chatService
+@inject IJSRuntime JSRuntime
+
+
+<PageTitle>Chat Messages</PageTitle>
+
+<div class="h-100 d-flex flex-column overflow-hidden">
+    <!--Header Row-->
+    @if (ShowHeader)
+    {
+        <div class="flex-column bg-dark" data-bs-theme="dark">
+
+            <div class="w-100 p-1 text-white p-4" style="text-align:left">
+                <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+                    <span class="oi oi-menu" aria-hidden="true" style="color: white"></span>
+                </button>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <span class="px-4">Cosmos DB Chat</span>
+            </div>
+
+
+        </div>
+    }
+    <div class="flex-column  bg-light">
+        <div class="p-2 d-flex flex-row" style="height:55px">
+            <div class="flex-row justify-content-center flex-grow-1">
+                <h4 class="text-dark py-2">@GetChatSessionName()</h4>
+            </div>
+            <div style="min-width:150px">
+                <span class="oi oi-person me-2" aria-hidden="true"></span>
+                <input type="text" @oninput="@((e) => { Sender=(string)e.Value;})" rows="1" placeholder="<Your Name>" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+                       style="height:24px; overflow-y: hidden; width:100px;resize: none"></input>
+
+
+            </div>
+        </div>
+    </div>
+    <!--Content Row-->
+    <div class="flex-column justify-content-center p-4 flex-grow-1 overflow-auto" id="MessagesInChatdiv">
+
+        @if (CurrentChatSession == null)
+        {
+            <div class="alert alert-info mt-4">
+                <span class="oi oi-data-transfer-download me-2" aria-hidden="true"></span>
+                Please wait while your chat loads.
+            </div>
+        }
+        else if (CurrentChatSession.ChatSessionId == "404")
+        {
+            <div class="alert alert-primary mt-4">
+                <span class="oi oi-lightbulb me-2" aria-hidden="true"></span>
+                <strong>No Chats Available</strong>
+
+                <span class="text-nowrap">
+                    Use the New Chat option to start a new chat.
+                </span>
+            </div>
+        }
+        else
+        {
+
+            {
+                if (MessagesInChat == null || LoadingComplete == false)
+                {
+                    <div class="alert alert-info mt-4">
+                        <span class="oi oi-data-transfer-download me-2" aria-hidden="true"></span>
+                        Please wait while your chat loads.
+                    </div>
+                }
+                else
+                {
+                    if (MessagesInChat.Count == 0)
+                    {
+                        <div class="alert alert-info mt-4">
+                            <span class="oi oi-envelope-open me-2" aria-hidden="true"></span>
+                            <span class="text-nowrap">
+                                This chat has no messages.
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var msg in MessagesInChat)
+                        {
+                           
+                            <p class="text-secondary">
+                                <b> @msg.Sender </b> &nbsp;&nbsp;&nbsp;<span class="small">@msg.TimeStamp</span>
+                            <p>@msg.Text</p>
+                            </p>
+                            
+                        }
+                    }
+                }
+            }
+        }
+
+    </div>
+    <!--Prompt Input Row-->
+    <div class="@GetPromptVisibility() flex-column justify-content-center px-4" style="min-height:75px">
+        <div style="padding:10px" class="border border-secondary rounded">
+
+            <input type="text" @bind="@UserPromptSet" @onkeydown="@Enter" @oninput="@((e) => { UserPrompt=(string)e.Value;})" rows="1" placeholder="<Your Message>" class="m-0 w-full border-0 bg-transparent p-0 pl-2 pr-7"
+                   style="height:24px; overflow-y: hidden; width:calc(100% - 25px);resize: none"></input>
+            <a style="cursor:pointer" @onclick="submitPrompt">
+                <span class="oi oi-share" aria-hidden="true"></span>
+            </a>
+
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public EventCallback<string> OnChatRenamed { get; set; }
+
+    [Parameter]
+    public ChatSession CurrentChatSession { get; set; }
+
+    [Parameter]
+    public bool ShowHeader { get; set; }
+
+    [Parameter]
+    public EventCallback OnNavBarVisibilityUpdated { get; set; }
+
+
+    List<ChatMessage> MessagesInChat;
+    private static event EventHandler<ChatSession> OnMessagePosted;
+    private bool LoadingComplete;
+    private string UserPrompt { get; set; }
+    private string UserPromptSet { get; set; }
+    private string Sender;
+
+
+    async private Task ToggleNavMenu()
+    {
+        await OnNavBarVisibilityUpdated.InvokeAsync();
+    }
+
+
+    public async Task ReLoadChatMessages()
+    {
+        if (CurrentChatSession != null)
+            MessagesInChat = await chatService.GetChatSessionMessagesAsync(CurrentChatSession.ChatSessionId);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        OnMessagePosted += (o, e) =>
+        {
+            this.InvokeAsync(() =>
+            {
+                if (e.ChatSessionId == CurrentChatSession.ChatSessionId)
+                {
+                    this.ReLoadChatMessages();
+                    this.StateHasChanged();
+                }
+            });
+        };
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+        if (CurrentChatSession == null)
+            return;
+
+        if (CurrentChatSession.ChatSessionId != "404" & CurrentChatSession.ChatSessionId != null)
+            MessagesInChat = await chatService.GetChatSessionMessagesAsync(CurrentChatSession.ChatSessionId);
+
+        LoadingComplete = true;
+    }
+
+
+
+    public async Task Enter(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            await submitPrompt();
+        }
+    }
+
+
+    private async Task submitPrompt()
+    {
+        if (CurrentChatSession.ChatSessionId == "404" || UserPrompt == "" || UserPrompt == null)
+            return;
+
+        if (Sender == null || Sender == "")
+        {
+            ShowAlert("Please update sender name.");
+            return;
+        }
+            if (UserPrompt != "")
+        {
+            UserPromptSet = "";
+
+        }
+                
+       
+        var chatMessage = await chatService.AddChatMessageAsync(CurrentChatSession.ChatSessionId, Sender, UserPrompt);
+
+        if (null != OnMessagePosted)
+        {
+            OnMessagePosted.Invoke(null, CurrentChatSession);
+        }
+
+        ScrollLastChatToView();
+    }
+
+
+
+    private string GetChatSessionName()
+    {
+        if (CurrentChatSession == null || CurrentChatSession.ChatSessionId == "404")
+            return "";
+        else
+            return CurrentChatSession.ChatSessionName;
+    }
+
+    private string GetPromptVisibility()
+    {
+        if (CurrentChatSession == null || CurrentChatSession.ChatSessionId == "404" || CurrentChatSession.ChatSessionId == null || LoadingComplete == false)
+            return "invisible";
+        else
+            return "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        ScrollLastChatToView();
+    }
+    private async Task ScrollLastChatToView()
+    {
+        await JSRuntime.InvokeAsync<bool>("scrollToLastMessage");
+    }
+
+    protected async Task ShowAlert(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", text); // Alert
+    }
+}
