@@ -39,8 +39,6 @@
             return chatSessions;
         }
 
-                     
-
 
         //Returns the chat messages to display on the main web page when the user selects a chat from the left-hand nav
         public async Task<List<ChatMessage>> GetChatSessionMessagesAsync(string chatSessionId)
