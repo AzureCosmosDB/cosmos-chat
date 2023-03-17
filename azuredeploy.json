@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.14.85.62628",
-      "templateHash": "811443923828702414"
+      "version": "0.15.31.15270",
+      "templateHash": "3721723905311811739"
     }
   },
   "parameters": {
@@ -177,7 +177,7 @@
     {
       "type": "Microsoft.Web/sites/sourcecontrols",
       "apiVersion": "2020-12-01",
-      "name": "[format('{0}/web', variables('webSiteName'))]",
+      "name": "[format('{0}/{1}', variables('webSiteName'), 'web')]",
       "properties": {
         "repoUrl": "[variables('webSiteRepository')]",
         "branch": "main",

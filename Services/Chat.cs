@@ -56,30 +56,18 @@ namespace cosmoschat.Services
         
         public string Text { get; set; }
 
-        public ChatMessage(string ChatSessionId, string Sender, string Text)
+        public ChatMessage(string chatSessionId, string sender, string text)
         {
 
             this.Id = Guid.NewGuid().ToString();
             this.Type = "ChatMessage";
-            this.ChatSessionId = ChatSessionId; //partition key
-            this.Sender = Sender;
-            this.TimeStamp = DateTime.UtcNow; //need to make ISO 8601
-            this.Text = Text;
+            this.ChatSessionId = chatSessionId; //partition key
+            this.Sender = sender;
+            this.TimeStamp = DateTime.UtcNow;
+            this.Text = text;
 
         }
 
-        [JsonConstructor]
-        public ChatMessage(string ChatSessionId, string id, string Sender, string Text, DateTime timeStamp)
-        {
-
-            this.Id = Guid.NewGuid().ToString();
-            this.Type = "ChatMessage";
-            this.ChatSessionId = ChatSessionId; //partition key
-            this.Sender = Sender;
-            this.TimeStamp = timeStamp;
-            this.Text = Text;
-
-        }
     }
 
 }

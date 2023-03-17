@@ -1,6 +1,3 @@
-targetScope = 'resourceGroup'
-
-
 param location string = resourceGroup().location
 
 @description('Name of the chat application. Needs to be unique for Cosmos DB & App Service')
@@ -25,7 +22,7 @@ var webSiteRepository = 'https://github.com/AzureCosmosDB/cosmos-chat.git'
 var databaseName = 'ChatDatabase'
 var containerName = 'ChatContainer'
 
-resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
   name: cosmosDBAccountName
   location: location
   kind: 'GlobalDocumentDB'
@@ -45,9 +42,9 @@ resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
   }
 }
 
-resource database 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-08-15' = {
+resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-08-15' = {
+  parent: cosmosAccount
   name: databaseName
-  parent: cosmosDBAccount
   properties: {
     resource: {
       id: databaseName
@@ -55,9 +52,9 @@ resource database 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-08-15
   }
 }
 
-resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
+resource cosmosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
+  parent: cosmosDatabase
   name: containerName
-  parent: database
   properties: {
     resource: {
       id: containerName
@@ -86,12 +83,11 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
         ]
       }
     }
-    options:{
+    options: {
       throughput: cosmosContainerThroughput
     }
   }
 }
-
 
 resource hostingPlan 'Microsoft.Web/serverfarms@2020-12-01' = {
   name: hostingPlanName
@@ -108,14 +104,14 @@ resource webSite 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     serverFarmId: hostingPlan.id
     siteConfig: {
-      appSettings:[
+      appSettings: [
         {
           name: 'CosmosUri'
-          value: cosmosDBAccount.properties.documentEndpoint
+          value: cosmosAccount.properties.documentEndpoint
         }
         {
           name: 'CosmosKey'
-          value: listKeys(cosmosDBAccount.id, '2022-08-15').primaryMasterKey
+          value: cosmosAccount.listKeys().primaryMasterKey
         }
         {
           name: 'CosmosDatabase'
@@ -126,18 +122,16 @@ resource webSite 'Microsoft.Web/sites@2020-12-01' = {
           value: containerName
         }
       ]
-
     }
   }
 }
 
-resource webSiteSource 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
-  name: '${webSite.name}/web'
+resource source 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
+  parent: webSite
+  name: 'web'
   properties: {
     repoUrl: webSiteRepository
     branch: 'main'
     isManualIntegration: true
   }
 }
-
-

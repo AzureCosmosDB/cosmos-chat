@@ -31,9 +31,6 @@ namespace cosmoschat.Services
         public async Task<List<ChatSession>> GetChatSessionsListAsync()
         {
 
-            if (chatContainer == null)
-                chatContainer = await CreateContainerIfNotExistsAsync(databaseId, containerId);
-
             List<ChatSession> chatSessions = new();
 
             try { 
@@ -137,36 +134,6 @@ namespace cosmoschat.Services
 
         }
 
-        public async Task<Container> CreateContainerIfNotExistsAsync(string databaseId, string containerId)
-        {
-
-            Database database = await cosmosClient.CreateDatabaseIfNotExistsAsync(databaseId); //= cosmosClient.GetDatabase(databaseId); //
-
-            ContainerProperties properties = new ContainerProperties();
-
-            properties.Id = containerId;
-            properties.PartitionKeyDefinitionVersion = PartitionKeyDefinitionVersion.V2;
-            properties.PartitionKeyPath = "/ChatSessionId";
-
-            properties.IndexingPolicy.Automatic = true;
-            properties.IndexingPolicy.IndexingMode = IndexingMode.Consistent;
-            properties.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
-            //properties.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/Response/?" });
-            properties.IndexingPolicy.CompositeIndexes.Add(
-                new Collection<CompositePath> { 
-                    new CompositePath() { 
-                        Path = "/ChatName", Order = CompositePathSortOrder.Ascending,}, 
-                    new CompositePath() { 
-                        Path = "/DateTime", Order = CompositePathSortOrder.Ascending 
-                    } 
-                });
-
-            ThroughputProperties throughput = ThroughputProperties.CreateAutoscaleThroughput(1000);
-
-            return await database.CreateContainerIfNotExistsAsync(properties, throughput);
-
-            
-        }
     }
 
 }
