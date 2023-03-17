@@ -1,0 +1,63 @@
+﻿@page "/"
+
+
+
+@using cosmoschat.Services
+
+@if (!IsNavMenuCollapsed)
+{
+    <div class="flex-row justify-content-center sidebar" style="min-width:275px">
+        <NavMenu @ref="@navmenu" OnChatClicked="LoadChatEventHandler" OnNavBarVisibilityUpdated="UpdateNavBarVisibility" />
+    </div>
+}
+<div class="flex-row justify-content-center flex-grow-1">
+    <ChatPane @ref="@ChatPane" CurrentChatSession="@CurrentSession" OnChatRenamed="ForceRefresh" OnNavBarVisibilityUpdated="UpdateNavBarVisibility" ShowHeader=IsNavMenuCollapsed />
+</div>
+
+@code {
+
+    private ChatSession CurrentSession;//{ get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnChatRenamed { get; set; }
+
+    private ChatPane ChatPane;
+
+    private NavMenu navmenu;
+
+
+    private bool IsNavMenuCollapsed { get; set; }
+
+
+    async private void UpdateNavBarVisibility()
+    {
+        IsNavMenuCollapsed = !IsNavMenuCollapsed;
+    }
+
+
+    async protected override void OnInitialized()
+    {
+        navmenu = new NavMenu();
+        ChatPane = new ChatPane();
+
+    }
+    async public void LoadChatEventHandler(ChatSession session)
+    {
+        CurrentSession = session;
+
+        ChatPane.CurrentChatSession = session;
+
+        // Inform blazor the UI needs updating
+        InvokeAsync(StateHasChanged);
+    }
+
+    async public void ForceRefresh()
+    {    
+        // Inform blazor the UI needs updating
+        InvokeAsync(StateHasChanged);
+        navmenu.UpdateNavMenuDisplay("Rename by Open AI");
+
+    }
+
+    
+}

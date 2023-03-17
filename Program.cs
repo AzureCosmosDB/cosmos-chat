@@ -27,7 +27,7 @@ app.UseRouting();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
-app.MapHub<ChatHub>(ChatHub.HubUrl);
+
 
 //app.UseEndpoints(endpoints =>
 //{
