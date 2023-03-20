@@ -124,10 +124,9 @@ namespace cosmoschat.Services
             while (results.HasMoreResults)
             {
                 FeedResponse<ChatMessage> response = await results.ReadNextAsync();
-                foreach (ChatMessage chatMessage in response)
-                {
-                    chatMessages.Add(chatMessage);
-                }
+
+                chatMessages.AddRange(response);
+
             }
 
             return chatMessages;

@@ -14,6 +14,7 @@ namespace cosmoschat.Services
 
         public string ChatSessionName { get; set; }
 
+        [JsonIgnore]
         public List<ChatMessage> Messages { get; set; }
 
 		public ChatSession()
