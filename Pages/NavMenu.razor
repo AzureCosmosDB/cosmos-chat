@@ -18,7 +18,7 @@
         {
             <div>
                 <nav class="flex-column">
-                    <div class="nav-item px-3">
+                    <div class="nav-item px-3 ">
                         <NavLink style="cursor:pointer" class="nav-link" Match="NavLinkMatch.All" @onclick="@(e => NewChat())">
                             <span class="oi oi-plus" aria-hidden="true"></span> New Chat
                         </NavLink>
@@ -29,7 +29,7 @@
                         @foreach (var session in ChatSessions)
                         {
 
-                            <div class="btn @GetChatButtonClass(session.ChatSessionId)">
+                            <div class="btn @GetChatButtonClass(session.ChatSessionId)" @onclick="@(e => LoadChat(session.ChatSessionId,session.ChatSessionName))">
 
                                 <div class="w-100 p-1" style="text-align:left ">
                                     <a @onclick="@(e => LoadChat(session.ChatSessionId,session.ChatSessionName))">
