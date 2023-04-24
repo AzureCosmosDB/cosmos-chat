@@ -2,7 +2,7 @@
 
 This is a sample application that combines Azure Cosmos DB with ASP.NET Blazor Server, to provide a simple chat application. 
 
-This application can be run locally without an Azure subscription using an (Azure Cosmos DB Free Trial Account](https://aka.ms/TryCosmos). This can also be deployed to Azure App Service with an Azure subscription.
+This application can be run locally without an Azure subscription using an [Azure Cosmos DB Free Trial Account](https://aka.ms/TryCosmos). This can also be deployed to Azure App Service with an Azure subscription.
 
 This application was built using:
 - Azure Cosmos DB
