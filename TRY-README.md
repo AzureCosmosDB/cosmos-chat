@@ -28,7 +28,7 @@ Please note this is a sample application. It is intended to demonstrate a use ca
 ### Installation
 
 1. Create a trial Azure Cosmos DB account at https://aka.ms/TryCosmos 
-1. Fork this repository to your own GitHub account and/or clone locally.
+1. [Fork this repository](https://github.com/AzureCosmosDB/cosmos-chat/fork) to your own GitHub account and/or clone locally.
 1. Open appsettings.json and enter the endpoint and key to your trial Cosmos DB account.
 
 
