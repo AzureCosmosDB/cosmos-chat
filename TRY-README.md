@@ -2,7 +2,7 @@
 
 This is a sample application that combines Azure Cosmos DB with ASP.NET Blazor Server, to provide a simple chat application. 
 
-This application can be run locally without an Azure subscription using an [Azure Cosmos DB Free Trial Account](https://aka.ms/trycosmosdbchatconversion). This can also be deployed to Azure App Service with an Azure subscription.
+This application can be run locally without an Azure subscription using an [Azure Cosmos DB Free Trial Account](https://aka.ms/Trycosmosdbc). This can also be deployed to Azure App Service with an Azure subscription.
 
 This application was built using:
 - Azure Cosmos DB
@@ -21,13 +21,13 @@ Please note this is a sample application. It is intended to demonstrate a use ca
 
 ### Prerequisites
 
-- A [Try Cosmos DB Account](https://aka.ms/trycosmosdbchatconversion)
+- A [Try Cosmos DB Account](https://aka.ms/Trycosmosdbc)
 - An editor with debugging support, Visual Studio, VS Code, or some editor if you want to edit or view the source for this sample.
 
 
 ### Installation
 
-1. Create a trial Azure Cosmos DB account at https://aka.ms/trycosmosdbchatconversion 
+1. Create a trial Azure Cosmos DB account at [https://aka.ms/TryCosmos ](https://aka.ms/Trycosmosdbc)
 1. [Fork this repository](https://github.com/AzureCosmosDB/cosmos-chat/fork) to your own GitHub account and/or clone locally.
 1. Open appsettings.json and enter the endpoint and key to your trial Cosmos DB account.
 
@@ -42,7 +42,7 @@ Please note this is a sample application. It is intended to demonstrate a use ca
 
 ## Resources
 
-- [Azure Cosmos DB Free Trial](https://aka.ms/trycosmosdbchatconversion)
+- [Azure Cosmos DB Free Trial](https://aka.ms/Trycosmosdbc)
 - [Azure Cosmos DB Documentation](https://learn.microsoft.com/azure/cosmos-db/)
 - [Azure App Service Documentation](https://learn.microsoft.com/azure/app-service/)
 - [ASP.NET Core Blazor Documentation](https://learn.microsoft.com/aspnet/core/blazor/)
